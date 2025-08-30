@@ -21,4 +21,127 @@
     </style>
 </head>
 <body>
-    
+    <div class="container">
+        <h1>Library Book Tracker</h1>
+
+        <h2>Add a New Book</h2>
+        <form id="addBookForm">
+            <input type="text" id="title" placeholder="Title" required>
+            <input type="text" id="author" placeholder="Author" required>
+            <input type="text" id="genres" placeholder="Genres (e.g., fiction, mystery)">
+            <label>
+                <input type="checkbox" id="availability" checked> Available
+            </label>
+            <button type="submit">Add Book</button>
+        </form>
+
+        <hr>
+
+        <h2>Book Collection</h2>
+        <div style="margin-bottom: 10px;">
+            <input type="text" id="filterGenre" placeholder="Filter by genre">
+            <button onclick="fetchBooks()">Filter/View All Books</button>
+        </div>
+        
+        <div id="booksContainer" class="book-list"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost/path/to/your/api.php/books';
+
+        async function fetchBooks() {
+            const filterGenre = document.getElementById('filterGenre').value;
+            const url = filterGenre ? `${API_URL}?genre=${filterGenre}` : API_URL;
+
+            try {
+                const response = await fetch(url);
+                const books = await response.json();
+                const container = document.getElementById('booksContainer');
+                container.innerHTML = '';
+
+                if (!books || books.length === 0) {
+                    container.innerHTML = '<p>No books found.</p>';
+                    return;
+                }
+
+                books.forEach(book => {
+                    const genres = JSON.parse(book.genres || '[]').join(', ');
+                    const bookItem = document.createElement('div');
+                    bookItem.className = 'book-item';
+                    bookItem.innerHTML = `
+                        <div class="book-details">
+                            <strong>Title:</strong> ${book.title} <br>
+                            <strong>Author:</strong> ${book.author} <br>
+                            <strong>Availability:</strong> ${book.availability == 1 ? 'Available' : 'Not Available'} <br>
+                            <strong>Genres:</strong> ${genres}
+                        </div>
+                        <div class="actions">
+                            <button onclick="deleteBook(${book.id})">Remove</button>
+                            <button class="update-btn" onclick="promptUpdate(${book.id}, '${book.title}', '${book.author}', ${book.availability}, '${genres}')">Update</button>
+                        </div>
+                    `;
+                    container.appendChild(bookItem);
+                });
+            } catch (error) {
+                console.error('Error fetching books:', error);
+            }
+        }
+        document.getElementById('addBookForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const title = document.getElementById('title').value;
+            const author = document.getElementById('author').value;
+            const genresInput = document.getElementById('genres').value;
+            const availability = document.getElementById('availability').checked;
+            const genres = genresInput.split(',').map(g => g.trim()).filter(g => g.length > 0);
+
+            const newBook = { title, author, availability, genres };
+            
+            await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newBook)
+            });
+            
+            fetchBooks();
+            document.getElementById('addBookForm').reset();
+        });
+
+        async function deleteBook(id) {
+            await fetch(`${API_URL}/${id}`, {
+                method: 'DELETE'
+            });
+            fetchBooks();
+        }
+        async function promptUpdate(id, currentTitle, currentAuthor, currentAvailability, currentGenres) {
+            const newTitle = prompt(`Enter new title for "${currentTitle}":`, currentTitle);
+            if (newTitle === null) return;
+
+            const newAuthor = prompt(`Enter new author for "${currentTitle}":`, currentAuthor);
+            if (newAuthor === null) return;
+
+            const newAvailability = confirm(`Is "${newTitle}" available? OK for Yes, Cancel for No.`);
+            
+            const newGenresInput = prompt(`Enter new genres for "${newTitle}" (comma-separated):`, currentGenres);
+            if (newGenresInput === null) return;
+            const newGenres = newGenresInput.split(',').map(g => g.trim()).filter(g => g.length > 0);
+
+            const updatedBook = {
+                title: newTitle,
+                author: newAuthor,
+                availability: newAvailability,
+                genres: newGenres
+            };
+
+            await fetch(`${API_URL}/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updatedBook)
+            });
+
+            fetchBooks();
+        }
+
+        fetchBooks();
+    </script>
+</body>
+</html>
