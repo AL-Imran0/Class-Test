@@ -54,7 +54,8 @@ switch ($method) {
             echo json_encode($books);
         }
         break;
-        case 'POST':
+
+    case 'POST':
         $data = json_decode(file_get_contents('php://input'), true);
         $title = $data['title'] ?? '';
         $author = $data['author'] ?? '';
@@ -72,4 +73,50 @@ switch ($method) {
             echo json_encode(["error" => "Error: " . $stmt->error]);
         }
         break;
+
+    case 'PUT':
+        if (!$id) {
+            http_response_code(400);
+            die(json_encode(["error" => "Book ID not provided."]));
         }
+        $data = json_decode(file_get_contents('php://input'), true);
+        $title = $data['title'] ?? null;
+        $author = $data['author'] ?? null;
+        $availability = $data['availability'] ?? null;
+        $genres = isset($data['genres']) ? json_encode($data['genres']) : null;
+        
+        $sql = "UPDATE books SET title=?, author=?, availability=?, genres=? WHERE id=?";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("ssisi", $title, $author, $availability, $genres, $id);
+        if ($stmt->execute()) {
+            echo json_encode(["message" => "Book updated successfully."]);
+        } else {
+            http_response_code(500);
+            echo json_encode(["error" => "Error: " . $stmt->error]);
+        }
+        break;
+
+    case 'DELETE':
+        if (!$id) {
+            http_response_code(400);
+            die(json_encode(["error" => "Book ID not provided."]));
+        }
+        $sql = "DELETE FROM books WHERE id = ?";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("i", $id);
+        if ($stmt->execute()) {
+            echo json_encode(["message" => "Book removed successfully."]);
+        } else {
+            http_response_code(500);
+            echo json_encode(["error" => "Error: " . $stmt->error]);
+        }
+        break;
+
+    default:
+        http_response_code(405);
+        echo json_encode(["error" => "Method not allowed."]);
+        break;
+}
+
+$conn->close();
+?>
