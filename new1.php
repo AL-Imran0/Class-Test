@@ -53,4 +53,23 @@ switch ($method) {
             }
             echo json_encode($books);
         }
+        break;
+        case 'POST':
+        $data = json_decode(file_get_contents('php://input'), true);
+        $title = $data['title'] ?? '';
+        $author = $data['author'] ?? '';
+        $availability = $data['availability'] ?? true;
+        $genres = json_encode($data['genres'] ?? []);
+        
+        $sql = "INSERT INTO books (title, author, availability, genres) VALUES (?, ?, ?, ?)";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("ssis", $title, $author, $availability, $genres);
+        if ($stmt->execute()) {
+            http_response_code(201);
+            echo json_encode(["message" => "Book added successfully."]);
+        } else {
+            http_response_code(500);
+            echo json_encode(["error" => "Error: " . $stmt->error]);
+        }
+        break;
         }
