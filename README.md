@@ -1,2 +1,5 @@
 # Class-Test
-#GET /books → List all books 
+# get/book 
+# GET /books/{id}
+# GET /books?genre=fiction
+# PUT /books/{id}
